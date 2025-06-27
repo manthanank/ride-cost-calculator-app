@@ -6,7 +6,18 @@ This is an Angular-based web application for calculating ride costs. The app all
 
 - User-friendly interface for entering ride details
 - Real-time cost calculation
+- Supports multiple currencies (₹, $, €) and distance units (km, mi)
+- Ride history saved locally in your browser
+- Export ride history as CSV
+- Print ride receipts
+- Clear ride history
 - Responsive design for mobile and desktop
+
+## Tech Stack & Dependencies
+
+- **Angular 20**
+- **Tailwind CSS 4** (configured via `.postcssrc.json` and imported in `src/styles.css`)
+- **TypeScript** (strict mode enabled)
 
 ## Getting Started
 
@@ -63,10 +74,34 @@ ng build --configuration production
 
 The build artifacts will be stored in the `dist/` directory.
 
+## Usage
+
+1. Select your preferred currency (₹, $, €) and distance unit (km, mi).
+2. Enter the ride distance, vehicle mileage (km/l), and petrol price per liter.
+3. Click **Calculate** to see the total cost.
+4. Your ride history is saved locally and shown below the calculator.
+5. Export your ride history as a CSV file or print a receipt for any ride.
+6. Use **Clear** to remove all ride history.
+
 ## Project Structure
 
-- `src/app/` - Main application code
-- `public/` - Static assets and icons
+- `src/app/` - Main application code (`app.ts`, `app.html`, `app.css`)
+- `public/` - Static assets, icons, and manifest (`site.webmanifest`)
+- `src/styles.css` - Imports Tailwind CSS
+- `.postcssrc.json` - PostCSS config for Tailwind
+
+## Styling
+
+Tailwind CSS is used for utility-first styling. You can customize styles in `src/styles.css` and configure plugins in `.postcssrc.json`.
+
+## PWA & Icons
+
+- The app includes a web manifest and icons for installation on mobile devices.
+- **Note:** No service worker is registered by default, so offline support is limited.
+
+## TypeScript
+
+- The project uses strict TypeScript settings for better code quality and maintainability.
 
 ## Further Help
 
