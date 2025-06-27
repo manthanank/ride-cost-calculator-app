@@ -53,14 +53,20 @@
     <div class="mt-8">
       <div class="flex justify-between items-center mb-2">
         <h2 class="text-lg font-semibold">📜 Ride History</h2>
-        <button (click)="clearHistory()" class="text-red-600 hover:underline text-sm">Clear</button>
+        <div class="flex gap-3 text-sm">
+          <button (click)="exportToCSV()" class="text-blue-600 hover:underline">Export CSV</button>
+          <button (click)="clearHistory()" class="text-red-600 hover:underline">Clear</button>
+        </div>
       </div>
       <ul class="max-h-60 overflow-y-auto space-y-2">
         @for (ride of rideHistory; track $index) {
         <li class="bg-gray-100 rounded-md p-2 text-sm flex justify-between items-start">
-          <div>
-            <p><strong>{{ ride.distance }} {{ ride.unit }}</strong> &#64; {{ ride.mileage }} km/l</p>
-            <p>{{ ride.currency }}{{ ride.totalCost.toFixed(2) }} on {{ ride.date }}</p>
+          <div class="flex justify-between items-start">
+            <div>
+              <p><strong>{{ ride.distance }} {{ ride.unit }}</strong> &#64; {{ ride.mileage }} km/l</p>
+              <p>{{ ride.currency }}{{ ride.totalCost.toFixed(2) }} on {{ ride.date }}</p>
+            </div>
+            <button (click)="printRide(ride)" class="text-indigo-600 text-sm hover:underline ml-2">🖨️ Print</button>
           </div>
         </li>
         }
