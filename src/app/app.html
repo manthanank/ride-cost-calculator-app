@@ -1,29 +1,71 @@
-<div class="container">
-  <h1>🚗 Ride Cost Calculator</h1>
+<div class="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-10">
+  <div class="bg-white shadow-lg rounded-2xl p-6 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center mb-4 text-indigo-600">🚗 Ride Cost Calculator</h1>
 
-  <form (ngSubmit)="calculateCost()" #rideForm="ngForm">
-    <label>
-      Distance (km):
-      <input type="number" [(ngModel)]="distanceKm" name="distance" required />
-    </label>
+    <div class="grid grid-cols-2 gap-2 mb-4">
+      <select [(ngModel)]="currency" class="border p-2 rounded-md w-full">
+        <option value="₹">₹ INR</option>
+        <option value="$">$ USD</option>
+        <option value="€">€ EUR</option>
+      </select>
 
-    <label>
-      Mileage (km/l):
-      <input type="number" [(ngModel)]="mileage" name="mileage" required />
-    </label>
-
-    <label>
-      Petrol Price (₹/l):
-      <input type="number" [(ngModel)]="petrolPrice" name="petrolPrice" required />
-    </label>
-
-    <button type="submit">Calculate</button>
-    <button type="button" (click)="resetForm()">Reset</button>
-  </form>
-
-  @if (totalCost !== null) {
-    <div class="result">
-      <p>Total Ride Cost: <strong>₹{{ totalCost.toFixed(2) }}</strong></p>
+      <select [(ngModel)]="unit" class="border p-2 rounded-md w-full">
+        <option value="km">Kilometers</option>
+        <option value="mi">Miles</option>
+      </select>
     </div>
-  }
+
+    <form (ngSubmit)="calculateCost()" class="space-y-4">
+      <div>
+        <label class="block font-medium">Distance ({{ unit }})</label>
+        <input type="number" [(ngModel)]="distanceKm" name="distance" required class="w-full p-2 border rounded-md" />
+      </div>
+
+      <div>
+        <label class="block font-medium">Mileage (km/l)</label>
+        <input type="number" [(ngModel)]="mileage" name="mileage" required class="w-full p-2 border rounded-md" />
+      </div>
+
+      <div>
+        <label class="block font-medium">Petrol Price ({{ currency }}/l)</label>
+        <input type="number" [(ngModel)]="petrolPrice" name="petrolPrice" required
+          class="w-full p-2 border rounded-md" />
+      </div>
+
+      <div class="flex gap-4 mt-4">
+        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 w-full">
+          Calculate
+        </button>
+        <button type="button" (click)="resetForm()"
+          class="bg-gray-300 text-black px-4 py-2 rounded-md hover:bg-gray-400 w-full">
+          Reset
+        </button>
+      </div>
+    </form>
+
+    @if (totalCost !== null) {
+    <div class="mt-6 text-center bg-green-100 text-green-800 py-3 px-4 rounded-lg">
+      <p class="text-lg font-semibold">Total Cost: {{ currency }}{{ totalCost.toFixed(2) }}</p>
+    </div>
+    }
+
+    @if (rideHistory.length) {
+    <div class="mt-8">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-lg font-semibold">📜 Ride History</h2>
+        <button (click)="clearHistory()" class="text-red-600 hover:underline text-sm">Clear</button>
+      </div>
+      <ul class="max-h-60 overflow-y-auto space-y-2">
+        @for (ride of rideHistory; track $index) {
+        <li class="bg-gray-100 rounded-md p-2 text-sm flex justify-between items-start">
+          <div>
+            <p><strong>{{ ride.distance }} {{ ride.unit }}</strong> &#64; {{ ride.mileage }} km/l</p>
+            <p>{{ ride.currency }}{{ ride.totalCost.toFixed(2) }} on {{ ride.date }}</p>
+          </div>
+        </li>
+        }
+      </ul>
+    </div>
+    }
+  </div>
 </div>
