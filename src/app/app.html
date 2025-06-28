@@ -2,6 +2,19 @@
   <div class="bg-white shadow-lg rounded-2xl p-6 w-full max-w-md">
     <h1 class="text-2xl font-bold text-center mb-4 text-indigo-600">🚗 Ride Cost Calculator</h1>
 
+    <!-- Visitor Count Display -->
+    <div class="text-center mb-4 p-3 bg-blue-50 rounded-lg">
+      @if (isVisitorCountLoading()) {
+      <p class="text-sm text-gray-600">👥 Loading visitor count...</p>
+      } @else if (visitorCountError()) {
+      <p class="text-sm text-red-600">👥 {{ visitorCountError() }}</p>
+      } @else {
+      <p class="text-sm text-blue-700">
+        <span class="font-semibold">👥 {{ visitorCount() }}</span> unique visitors
+      </p>
+      }
+    </div>
+
     <div class="grid grid-cols-2 gap-2 mb-4">
       <select [(ngModel)]="currency" class="border p-2 rounded-md w-full">
         <option value="₹">₹ INR</option>

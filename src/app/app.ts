@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Visit } from './models/visit.model';
+import { Track } from './services/track';
 
 interface RideHistory {
   distance: number;
@@ -20,6 +22,8 @@ interface RideHistory {
 export class App {
   protected title = 'ride-cost-calculator-app';
 
+  private trackService = inject(Track);
+
   distanceKm: number | null = null;
   mileage: number | null = null;
   petrolPrice: number | null = null;
@@ -30,8 +34,34 @@ export class App {
 
   rideHistory: RideHistory[] = [];
 
+  // Visitor count state
+  visitorCount = signal<number>(0);
+  isVisitorCountLoading = signal<boolean>(false);
+  visitorCountError = signal<string | null>(null);
+
   constructor() {
     this.loadHistory();
+  }
+
+  ngOnInit() {
+    this.trackVisit();
+  }
+
+  private trackVisit(): void {
+    this.isVisitorCountLoading.set(true);
+    this.visitorCountError.set(null);
+
+    this.trackService.trackProjectVisit(this.title).subscribe({
+      next: (response: Visit) => {
+        this.visitorCount.set(response.uniqueVisitors);
+        this.isVisitorCountLoading.set(false);
+      },
+      error: (err: Error) => {
+        console.error('Failed to track visit:', err);
+        this.visitorCountError.set('Failed to load visitor count');
+        this.isVisitorCountLoading.set(false);
+      },
+    });
   }
 
   convertDistanceToKm(): number {
