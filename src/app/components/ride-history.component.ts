@@ -3,7 +3,6 @@ import { RideHistory } from '../models/ride-history.model';
 
 @Component({
   selector: 'app-ride-history',
-  standalone: true,
   template: `
     <div class="mt-8">
       <div class="flex justify-between items-center mb-2">

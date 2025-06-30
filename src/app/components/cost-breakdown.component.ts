@@ -2,7 +2,6 @@ import { Component, input } from '@angular/core';
 
 @Component({
   selector: 'app-cost-breakdown',
-  standalone: true,
   template: `
     <div class="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
       <h3 class="text-lg font-semibold text-indigo-800 dark:text-indigo-200 mb-3">💰 Cost Breakdown</h3>

@@ -2,7 +2,6 @@ import { Component, input } from '@angular/core';
 
 @Component({
   selector: 'app-visitor-count',
-  standalone: true,
   template: `
     <div class="text-center mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
       @if (isLoading()) {
