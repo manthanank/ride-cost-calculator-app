@@ -16,13 +16,13 @@
     </div>
 
     <div class="grid grid-cols-2 gap-2 mb-4">
-      <select [(ngModel)]="currency" class="border p-2 rounded-md w-full">
+      <select [ngModel]="currency()" (ngModelChange)="currency.set($event)" class="border p-2 rounded-md w-full">
         <option value="₹">₹ INR</option>
         <option value="$">$ USD</option>
         <option value="€">€ EUR</option>
       </select>
 
-      <select [(ngModel)]="unit" class="border p-2 rounded-md w-full">
+      <select [ngModel]="unit()" (ngModelChange)="unit.set($event)" class="border p-2 rounded-md w-full">
         <option value="km">Kilometers</option>
         <option value="mi">Miles</option>
       </select>
@@ -30,18 +30,18 @@
 
     <form (ngSubmit)="calculateCost()" class="space-y-4">
       <div>
-        <label class="block font-medium">Distance ({{ unit }})</label>
-        <input type="number" [(ngModel)]="distanceKm" name="distance" required class="w-full p-2 border rounded-md" />
+        <label class="block font-medium">Distance ({{ unit() }})</label>
+        <input type="number" [ngModel]="distanceKm()" (ngModelChange)="distanceKm.set($event)" name="distance" required class="w-full p-2 border rounded-md" />
       </div>
 
       <div>
         <label class="block font-medium">Mileage (km/l)</label>
-        <input type="number" [(ngModel)]="mileage" name="mileage" required class="w-full p-2 border rounded-md" />
+        <input type="number" [ngModel]="mileage()" (ngModelChange)="mileage.set($event)" name="mileage" required class="w-full p-2 border rounded-md" />
       </div>
 
       <div>
-        <label class="block font-medium">Petrol Price ({{ currency }}/l)</label>
-        <input type="number" [(ngModel)]="petrolPrice" name="petrolPrice" required
+        <label class="block font-medium">Petrol Price ({{ currency() }}/l)</label>
+        <input type="number" [ngModel]="petrolPrice()" (ngModelChange)="petrolPrice.set($event)" name="petrolPrice" required
           class="w-full p-2 border rounded-md" />
       </div>
 
@@ -56,13 +56,13 @@
       </div>
     </form>
 
-    @if (totalCost !== null) {
+    @if (totalCost() !== null) {
     <div class="mt-6 text-center bg-green-100 text-green-800 py-3 px-4 rounded-lg">
-      <p class="text-lg font-semibold">Total Cost: {{ currency }}{{ totalCost.toFixed(2) }}</p>
+      <p class="text-lg font-semibold">Total Cost: {{ currency() }}{{ totalCost()?.toFixed(2) }}</p>
     </div>
     }
 
-    @if (rideHistory.length) {
+    @if (rideHistory().length) {
     <div class="mt-8">
       <div class="flex justify-between items-center mb-2">
         <h2 class="text-lg font-semibold">📜 Ride History</h2>
@@ -72,7 +72,7 @@
         </div>
       </div>
       <ul class="max-h-60 overflow-y-auto space-y-2">
-        @for (ride of rideHistory; track $index) {
+        @for (ride of rideHistory(); track $index) {
         <li class="bg-gray-100 rounded-md p-2 text-sm flex justify-between items-start">
           <div class="flex justify-between items-start">
             <div>

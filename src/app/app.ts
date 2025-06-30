@@ -1,17 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { httpResource } from '@angular/common/http';
 import { Visit } from './models/visit.model';
-import { Track } from './services/track';
-
-interface RideHistory {
-  distance: number;
-  mileage: number;
-  petrolPrice: number;
-  totalCost: number;
-  unit: string;
-  currency: string;
-  date: string;
-}
+import { RideHistory } from './models/ride-history.model';
+import { environment } from '../environments/environment.development';
 
 @Component({
   selector: 'app-root',
@@ -22,22 +14,38 @@ interface RideHistory {
 export class App {
   protected title = 'ride-cost-calculator-app';
 
-  private trackService = inject(Track);
+  private apiURL = environment.trackingApiUrl;
 
-  distanceKm: number | null = null;
-  mileage: number | null = null;
-  petrolPrice: number | null = null;
-  totalCost: number | null = null;
+  // Convert all properties to signals
+  distanceKm = signal<number | null>(null);
+  mileage = signal<number | null>(null);
+  petrolPrice = signal<number | null>(null);
+  totalCost = signal<number | null>(null);
 
-  unit: 'km' | 'mi' = 'km';
-  currency: '₹' | '$' | '€' = '₹';
+  unit = signal<'km' | 'mi'>('km');
+  currency = signal<'₹' | '$' | '€'>('₹');
 
-  rideHistory: RideHistory[] = [];
+  rideHistory = signal<RideHistory[]>([]);
 
-  // Visitor count state
-  visitorCount = signal<number>(0);
-  isVisitorCountLoading = signal<boolean>(false);
-  visitorCountError = signal<string | null>(null);
+  // Create a signal for the project name
+  projectName = signal<string>('');
+
+  // Create the httpResource that will react to projectName changes
+  visitResource = httpResource<Visit>(() => ({
+    url: this.apiURL,
+    method: 'POST',
+    body: { projectName: this.projectName() }
+  }));
+
+  // Use computed signals from httpResource
+  visitorCount = computed(() => {
+    const value = this.visitResource.value();
+    return value?.uniqueVisitors ?? 0;
+  });
+
+  isVisitorCountLoading = computed(() => this.visitResource.isLoading());
+
+  visitorCountError = computed(() => this.visitResource.error());
 
   constructor() {
     this.loadHistory();
@@ -48,71 +56,62 @@ export class App {
   }
 
   private trackVisit(): void {
-    this.isVisitorCountLoading.set(true);
-    this.visitorCountError.set(null);
-
-    this.trackService.trackProjectVisit(this.title).subscribe({
-      next: (response: Visit) => {
-        this.visitorCount.set(response.uniqueVisitors);
-        this.isVisitorCountLoading.set(false);
-      },
-      error: (err: Error) => {
-        console.error('Failed to track visit:', err);
-        this.visitorCountError.set('Failed to load visitor count');
-        this.isVisitorCountLoading.set(false);
-      },
-    });
+    // Update the signal to trigger the httpResource
+    this.projectName.set(this.title);
   }
 
   convertDistanceToKm(): number {
-    return this.unit === 'km' ? this.distanceKm! : this.distanceKm! * 1.60934;
+    return this.unit() === 'km' ? this.distanceKm()! : this.distanceKm()! * 1.60934;
   }
 
   calculateCost() {
-    if (this.distanceKm && this.mileage && this.petrolPrice) {
+    if (this.distanceKm() && this.mileage() && this.petrolPrice()) {
       const distanceInKm = this.convertDistanceToKm();
-      const litersUsed = distanceInKm / this.mileage;
-      this.totalCost = litersUsed * this.petrolPrice;
-      this.saveToHistory(distanceInKm, litersUsed * this.petrolPrice);
+      const litersUsed = distanceInKm / this.mileage()!;
+      const cost = litersUsed * this.petrolPrice()!;
+      this.totalCost.set(cost);
+      this.saveToHistory(distanceInKm, cost);
     }
   }
 
   saveToHistory(distance: number, totalCost: number) {
     const record: RideHistory = {
-      distance: this.distanceKm!,
-      mileage: this.mileage!,
-      petrolPrice: this.petrolPrice!,
+      distance: this.distanceKm()!,
+      mileage: this.mileage()!,
+      petrolPrice: this.petrolPrice()!,
       totalCost,
-      unit: this.unit,
-      currency: this.currency,
+      unit: this.unit(),
+      currency: this.currency(),
       date: new Date().toLocaleString(),
     };
 
-    this.rideHistory.unshift(record);
-    localStorage.setItem('rideHistory', JSON.stringify(this.rideHistory));
+    const currentHistory = this.rideHistory();
+    this.rideHistory.set([record, ...currentHistory]);
+    localStorage.setItem('rideHistory', JSON.stringify([record, ...currentHistory]));
   }
 
   loadHistory() {
     const saved = localStorage.getItem('rideHistory');
     if (saved) {
-      this.rideHistory = JSON.parse(saved);
+      this.rideHistory.set(JSON.parse(saved));
     }
   }
 
   resetForm() {
-    this.distanceKm = null;
-    this.mileage = null;
-    this.petrolPrice = null;
-    this.totalCost = null;
+    this.distanceKm.set(null);
+    this.mileage.set(null);
+    this.petrolPrice.set(null);
+    this.totalCost.set(null);
   }
 
   clearHistory() {
     localStorage.removeItem('rideHistory');
-    this.rideHistory = [];
+    this.rideHistory.set([]);
   }
 
   exportToCSV() {
-    if (this.rideHistory.length === 0) return;
+    const history = this.rideHistory();
+    if (history.length === 0) return;
 
     const headers = [
       'Distance',
@@ -123,7 +122,7 @@ export class App {
       'Currency',
       'Date',
     ];
-    const rows = this.rideHistory.map((r) =>
+    const rows = history.map((r) =>
       [
         r.distance,
         r.unit,
