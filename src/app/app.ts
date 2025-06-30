@@ -4,10 +4,14 @@ import { httpResource } from '@angular/common/http';
 import { Visit } from './models/visit.model';
 import { RideHistory } from './models/ride-history.model';
 import { environment } from '../environments/environment.development';
+import { RideHistoryComponent } from './components/ride-history.component';
+import { VisitorCountComponent } from './components/visitor-count.component';
+import { CostBreakdownComponent } from './components/cost-breakdown.component';
+import { ThemeService } from './services/theme.service';
 
 @Component({
   selector: 'app-root',
-  imports: [FormsModule],
+  imports: [FormsModule, RideHistoryComponent, VisitorCountComponent, CostBreakdownComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -15,6 +19,7 @@ export class App {
   protected title = 'ride-cost-calculator-app';
 
   private apiURL = environment.trackingApiUrl;
+  private themeService = inject(ThemeService);
 
   // Convert all properties to signals
   distanceKm = signal<number | null>(null);
@@ -26,6 +31,9 @@ export class App {
   currency = signal<'₹' | '$' | '€'>('₹');
 
   rideHistory = signal<RideHistory[]>([]);
+
+  // Theme-related signals
+  isDarkMode = this.themeService.isDarkMode;
 
   // Create a signal for the project name
   projectName = signal<string>('');
@@ -45,7 +53,10 @@ export class App {
 
   isVisitorCountLoading = computed(() => this.visitResource.isLoading());
 
-  visitorCountError = computed(() => this.visitResource.error());
+  visitorCountError = computed(() => {
+    const error = this.visitResource.error();
+    return error ? error.message : null;
+  });
 
   constructor() {
     this.loadHistory();
@@ -97,6 +108,10 @@ export class App {
     }
   }
 
+  retryLoadHistory() {
+    this.loadHistory();
+  }
+
   resetForm() {
     this.distanceKm.set(null);
     this.mileage.set(null);
@@ -107,6 +122,10 @@ export class App {
   clearHistory() {
     localStorage.removeItem('rideHistory');
     this.rideHistory.set([]);
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 
   exportToCSV() {

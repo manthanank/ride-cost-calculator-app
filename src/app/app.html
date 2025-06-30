@@ -1,28 +1,40 @@
-<div class="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-10">
-  <div class="bg-white shadow-lg rounded-2xl p-6 w-full max-w-md">
-    <h1 class="text-2xl font-bold text-center mb-4 text-indigo-600">🚗 Ride Cost Calculator</h1>
-
-    <!-- Visitor Count Display -->
-    <div class="text-center mb-4 p-3 bg-blue-50 rounded-lg">
-      @if (isVisitorCountLoading()) {
-      <p class="text-sm text-gray-600">👥 Loading visitor count...</p>
-      } @else if (visitorCountError()) {
-      <p class="text-sm text-red-600">👥 {{ visitorCountError() }}</p>
-      } @else {
-      <p class="text-sm text-blue-700">
-        <span class="font-semibold">👥 {{ visitorCount() }}</span> unique visitors
-      </p>
-      }
+<div class="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center px-4 py-10">
+  <div class="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-6 w-full max-w-md">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold text-center text-indigo-600 dark:text-indigo-400">🚗 Ride Cost Calculator</h1>
+      <button
+        (click)="toggleTheme()"
+        class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+        [attr.aria-label]="isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'">
+        @if (isDarkMode()) {
+          <span class="text-yellow-500 text-xl">☀️</span>
+        } @else {
+          <span class="text-gray-700 text-xl">🌙</span>
+        }
+      </button>
     </div>
 
+    <!-- Deferred Visitor Count Display -->
+    @defer (on idle) {
+      <app-visitor-count
+        [visitorCount]="visitorCount()"
+        [isLoading]="isVisitorCountLoading()"
+        [error]="visitorCountError()">
+      </app-visitor-count>
+    } @placeholder {
+      <div class="text-center mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+        <p class="text-sm text-gray-600 dark:text-gray-300">👥 Loading visitor statistics...</p>
+      </div>
+    }
+
     <div class="grid grid-cols-2 gap-2 mb-4">
-      <select [ngModel]="currency()" (ngModelChange)="currency.set($event)" class="border p-2 rounded-md w-full">
+      <select [ngModel]="currency()" (ngModelChange)="currency.set($event)" class="border dark:border-gray-600 p-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
         <option value="₹">₹ INR</option>
         <option value="$">$ USD</option>
         <option value="€">€ EUR</option>
       </select>
 
-      <select [ngModel]="unit()" (ngModelChange)="unit.set($event)" class="border p-2 rounded-md w-full">
+      <select [ngModel]="unit()" (ngModelChange)="unit.set($event)" class="border dark:border-gray-600 p-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
         <option value="km">Kilometers</option>
         <option value="mi">Miles</option>
       </select>
@@ -30,19 +42,19 @@
 
     <form (ngSubmit)="calculateCost()" class="space-y-4">
       <div>
-        <label class="block font-medium">Distance ({{ unit() }})</label>
-        <input type="number" [ngModel]="distanceKm()" (ngModelChange)="distanceKm.set($event)" name="distance" required class="w-full p-2 border rounded-md" />
+        <label class="block font-medium text-gray-900 dark:text-gray-100">Distance ({{ unit() }})</label>
+        <input type="number" [ngModel]="distanceKm()" (ngModelChange)="distanceKm.set($event)" name="distance" required class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
       </div>
 
       <div>
-        <label class="block font-medium">Mileage (km/l)</label>
-        <input type="number" [ngModel]="mileage()" (ngModelChange)="mileage.set($event)" name="mileage" required class="w-full p-2 border rounded-md" />
+        <label class="block font-medium text-gray-900 dark:text-gray-100">Mileage (km/l)</label>
+        <input type="number" [ngModel]="mileage()" (ngModelChange)="mileage.set($event)" name="mileage" required class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
       </div>
 
       <div>
-        <label class="block font-medium">Petrol Price ({{ currency() }}/l)</label>
+        <label class="block font-medium text-gray-900 dark:text-gray-100">Petrol Price ({{ currency() }}/l)</label>
         <input type="number" [ngModel]="petrolPrice()" (ngModelChange)="petrolPrice.set($event)" name="petrolPrice" required
-          class="w-full p-2 border rounded-md" />
+          class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
       </div>
 
       <div class="flex gap-4 mt-4">
@@ -50,41 +62,54 @@
           Calculate
         </button>
         <button type="button" (click)="resetForm()"
-          class="bg-gray-300 text-black px-4 py-2 rounded-md hover:bg-gray-400 w-full">
+          class="bg-gray-300 dark:bg-gray-600 text-black dark:text-white px-4 py-2 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 w-full">
           Reset
         </button>
       </div>
     </form>
 
     @if (totalCost() !== null) {
-    <div class="mt-6 text-center bg-green-100 text-green-800 py-3 px-4 rounded-lg">
+    <div class="mt-6 text-center bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 py-3 px-4 rounded-lg">
       <p class="text-lg font-semibold">Total Cost: {{ currency() }}{{ totalCost()?.toFixed(2) }}</p>
+
+      <!-- Deferred Cost Breakdown on Hover -->
+      @defer (on hover) {
+        <app-cost-breakdown
+          [distance]="distanceKm()!"
+          [unit]="unit()"
+          [mileage]="mileage()!"
+          [petrolPrice]="petrolPrice()!"
+          [totalCost]="totalCost()!"
+          [currency]="currency()">
+        </app-cost-breakdown>
+      } @placeholder {
+        <p class="text-xs text-green-700 dark:text-green-300 mt-2">💡 Hover for detailed breakdown</p>
+      }
     </div>
     }
 
-    @if (rideHistory().length) {
-    <div class="mt-8">
-      <div class="flex justify-between items-center mb-2">
-        <h2 class="text-lg font-semibold">📜 Ride History</h2>
-        <div class="flex gap-3 text-sm">
-          <button (click)="exportToCSV()" class="text-blue-600 hover:underline">Export CSV</button>
-          <button (click)="clearHistory()" class="text-red-600 hover:underline">Clear</button>
-        </div>
+    <!-- Deferred Ride History Section -->
+    @defer (on viewport; prefetch on idle) {
+      <app-ride-history
+        [rideHistory]="rideHistory()"
+        (clearHistory)="clearHistory()">
+      </app-ride-history>
+    } @placeholder (minimum 200ms) {
+      <div class="mt-8 text-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+        <p class="text-gray-600 dark:text-gray-300">📜 Ride history will load when you scroll here...</p>
       </div>
-      <ul class="max-h-60 overflow-y-auto space-y-2">
-        @for (ride of rideHistory(); track $index) {
-        <li class="bg-gray-100 rounded-md p-2 text-sm flex justify-between items-start">
-          <div class="flex justify-between items-start">
-            <div>
-              <p><strong>{{ ride.distance }} {{ ride.unit }}</strong> &#64; {{ ride.mileage }} km/l</p>
-              <p>{{ ride.currency }}{{ ride.totalCost.toFixed(2) }} on {{ ride.date }}</p>
-            </div>
-            <button (click)="printRide(ride)" class="text-indigo-600 text-sm hover:underline ml-2">🖨️ Print</button>
-          </div>
-        </li>
-        }
-      </ul>
-    </div>
+    } @loading (after 100ms; minimum 500ms) {
+      <div class="mt-8 text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+        <p class="text-blue-700 dark:text-blue-300">Loading ride history...</p>
+      </div>
+    } @error {
+      <div class="mt-8 text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+        <p class="text-red-600 dark:text-red-300">❌ Failed to load ride history</p>
+        <button (click)="retryLoadHistory()" class="mt-2 text-sm text-red-700 dark:text-red-300 hover:underline">
+          Try again
+        </button>
+      </div>
     }
   </div>
 </div>
