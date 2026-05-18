@@ -1,7 +1,9 @@
 <div class="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center px-4 py-10">
-  <div class="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-6 w-full max-w-md">
-    <div class="flex items-center justify-between mb-4">
-      <h1 class="text-2xl font-bold text-center text-indigo-600 dark:text-indigo-400">🚗 Ride Cost Calculator</h1>
+  <div class="bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-6 w-full max-w-lg">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-5">
+      <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">🚗 Ride Cost Calculator</h1>
       <button
         (click)="toggleTheme()"
         class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
@@ -14,7 +16,7 @@
       </button>
     </div>
 
-    <!-- Deferred Visitor Count Display -->
+    <!-- Visitor Count -->
     @defer (on idle) {
       <app-visitor-count
         [visitorCount]="visitorCount()"
@@ -27,73 +29,172 @@
       </div>
     }
 
+    <!-- Vehicle Presets -->
+    <app-vehicle-presets (presetSelected)="onPresetSelected($event)"></app-vehicle-presets>
+
+    <!-- Settings Row: Currency + Unit -->
     <div class="grid grid-cols-2 gap-2 mb-4">
-      <select [ngModel]="currency()" (ngModelChange)="currency.set($event)" class="border dark:border-gray-600 p-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-        <option value="₹">₹ INR</option>
-        <option value="$">$ USD</option>
-        <option value="€">€ EUR</option>
+      <select [ngModel]="currency()" (ngModelChange)="currency.set($event)"
+        class="border dark:border-gray-600 p-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
+        @for (c of currencies; track c.value) {
+          <option [value]="c.value">{{ c.label }}</option>
+        }
       </select>
 
-      <select [ngModel]="unit()" (ngModelChange)="unit.set($event)" class="border dark:border-gray-600 p-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+      <select [ngModel]="unit()" (ngModelChange)="unit.set($event)"
+        class="border dark:border-gray-600 p-2 rounded-md w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
         <option value="km">Kilometers</option>
         <option value="mi">Miles</option>
       </select>
     </div>
 
-    <form (ngSubmit)="calculateCost()" class="space-y-4">
+    <!-- Main Form -->
+    <form (ngSubmit)="calculateCost()" class="space-y-3">
+
+      <!-- Fuel Type -->
       <div>
-        <label class="block font-medium text-gray-900 dark:text-gray-100">Distance ({{ unit() }})</label>
-        <input type="number" [ngModel]="distanceKm()" (ngModelChange)="distanceKm.set($event)" name="distance" required class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+        <label class="block font-medium text-gray-900 dark:text-gray-100 text-sm mb-1">Fuel Type</label>
+        <div class="grid grid-cols-4 gap-1">
+          @for (ft of ['petrol', 'diesel', 'cng', 'electric']; track ft) {
+            <button type="button"
+              (click)="fuelType.set($any(ft))"
+              [class]="fuelType() === ft
+                ? 'bg-indigo-600 text-white border-indigo-600'
+                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'"
+              class="text-xs py-2 px-1 rounded-md border transition-colors text-center leading-tight">
+              {{ getFuelLabel(ft) }}
+            </button>
+          }
+        </div>
       </div>
 
+      <!-- Distance + Round Trip -->
       <div>
-        <label class="block font-medium text-gray-900 dark:text-gray-100">Mileage (km/l)</label>
-        <input type="number" [ngModel]="mileage()" (ngModelChange)="mileage.set($event)" name="mileage" required class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+        <div class="flex items-center justify-between mb-1">
+          <label class="block font-medium text-gray-900 dark:text-gray-100 text-sm">Distance ({{ unit() }})</label>
+          <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input type="checkbox" [ngModel]="isRoundTrip()" (ngModelChange)="isRoundTrip.set($event)" name="roundTrip"
+              class="rounded accent-indigo-600" />
+            ↩ Round Trip
+          </label>
+        </div>
+        <input type="number" [ngModel]="distanceKm()" (ngModelChange)="distanceKm.set($event)"
+          name="distance" required min="0.1" step="0.1"
+          class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm" />
+        @if (isRoundTrip() && distanceKm()) {
+          <p class="text-xs text-indigo-500 dark:text-indigo-400 mt-1">
+            ↩ Total: {{ (distanceKm()! * 2).toFixed(1) }} {{ unit() }} (round trip)
+          </p>
+        }
       </div>
 
+      <!-- Mileage -->
       <div>
-        <label class="block font-medium text-gray-900 dark:text-gray-100">Petrol Price ({{ currency() }}/l)</label>
-        <input type="number" [ngModel]="petrolPrice()" (ngModelChange)="petrolPrice.set($event)" name="petrolPrice" required
-          class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+        <label class="block font-medium text-gray-900 dark:text-gray-100 text-sm mb-1">
+          Mileage ({{ fuelType() === 'electric' ? 'km/kWh' : 'km/l' }})
+        </label>
+        <input type="number" [ngModel]="mileage()" (ngModelChange)="mileage.set($event)"
+          name="mileage" required min="0.1"
+          class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm" />
       </div>
 
-      <div class="flex gap-4 mt-4">
-        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 w-full">
+      <!-- Fuel Price -->
+      <div>
+        <label class="block font-medium text-gray-900 dark:text-gray-100 text-sm mb-1">
+          {{ fuelType() === 'electric' ? 'Energy Price' : 'Fuel Price' }} ({{ currency() }}/{{ fuelType() === 'electric' ? 'kWh' : 'l' }})
+        </label>
+        <input type="number" [ngModel]="petrolPrice()" (ngModelChange)="petrolPrice.set($event)"
+          name="petrolPrice" required min="0.01"
+          class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm" />
+      </div>
+
+      <!-- Ride Label -->
+      <div>
+        <label class="block font-medium text-gray-900 dark:text-gray-100 text-sm mb-1">
+          Ride Label <span class="text-gray-400 font-normal text-xs">(optional)</span>
+        </label>
+        <input type="text" [ngModel]="rideLabel()" (ngModelChange)="rideLabel.set($event)"
+          name="rideLabel" placeholder="e.g. Office commute, Weekend trip..."
+          class="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm" />
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-3 mt-2">
+        <button type="submit"
+          class="flex-1 bg-indigo-600 text-white px-4 py-2.5 rounded-md hover:bg-indigo-700 font-medium transition-colors">
           Calculate
         </button>
         <button type="button" (click)="resetForm()"
-          class="bg-gray-300 dark:bg-gray-600 text-black dark:text-white px-4 py-2 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 w-full">
+          class="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-2.5 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
           Reset
         </button>
       </div>
     </form>
 
+    <!-- Result -->
     @if (totalCost() !== null) {
-    <div class="mt-6 text-center bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 py-3 px-4 rounded-lg">
-      <p class="text-lg font-semibold">Total Cost: {{ currency() }}{{ totalCost()?.toFixed(2) }}</p>
+      <div class="mt-5 text-center bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 py-4 px-4 rounded-xl">
+        <p class="text-xl font-bold text-green-700 dark:text-green-300">
+          Total Cost: {{ currency() }}{{ totalCost()?.toFixed(2) }}
+        </p>
+        @if (costPerUnit() !== null) {
+          <p class="text-sm text-green-600 dark:text-green-400 mt-1">
+            {{ currency() }}{{ costPerUnit()!.toFixed(2) }} per {{ unit() }}
+          </p>
+        }
 
-      <!-- Deferred Cost Breakdown on Hover -->
-      @defer (on hover) {
-        <app-cost-breakdown
-          [distance]="distanceKm()!"
-          [unit]="unit()"
-          [mileage]="mileage()!"
-          [petrolPrice]="petrolPrice()!"
-          [totalCost]="totalCost()!"
-          [currency]="currency()">
-        </app-cost-breakdown>
-      } @placeholder {
-        <p class="text-xs text-green-700 dark:text-green-300 mt-2">💡 Hover for detailed breakdown</p>
-      }
-    </div>
+        <!-- Cost Breakdown on hover -->
+        @defer (on hover) {
+          <app-cost-breakdown
+            [distance]="distanceKm()!"
+            [unit]="unit()"
+            [mileage]="mileage()!"
+            [petrolPrice]="petrolPrice()!"
+            [totalCost]="totalCost()!"
+            [currency]="currency()">
+          </app-cost-breakdown>
+        } @placeholder {
+          <p class="text-xs text-green-600 dark:text-green-400 mt-2">💡 Hover for detailed breakdown</p>
+        }
+      </div>
+
+      <!-- Monthly Estimator -->
+      <app-monthly-estimator
+        [costPerRide]="totalCost()!"
+        [currency]="currency()">
+      </app-monthly-estimator>
     }
 
-    <!-- Deferred Ride History Section -->
+    <!-- Multi-Stop Route -->
+    <app-multi-stop
+      [unit]="unit()"
+      (totalDistanceSelected)="onMultiStopDistance($event)">
+    </app-multi-stop>
+
+    <!-- Comparison Mode -->
+    @if (distanceKm()) {
+      <app-comparison-mode
+        [distance]="distanceKm()!"
+        [unit]="unit()"
+        [currency]="currency()">
+      </app-comparison-mode>
+    }
+
+    <!-- Ride History Section -->
     @defer (on viewport; prefetch on idle) {
+
+      <!-- Stats Panel -->
+      <app-history-stats [rideHistory]="rideHistory()"></app-history-stats>
+
+      <!-- Chart -->
+      <app-ride-cost-chart [rideHistory]="rideHistory()"></app-ride-cost-chart>
+
+      <!-- History List -->
       <app-ride-history
         [rideHistory]="rideHistory()"
         (clearHistory)="clearHistory()">
       </app-ride-history>
+
     } @placeholder (minimum 200ms) {
       <div class="mt-8 text-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
         <p class="text-gray-600 dark:text-gray-300">📜 Ride history will load when you scroll here...</p>
@@ -111,5 +212,6 @@
         </button>
       </div>
     }
+
   </div>
 </div>

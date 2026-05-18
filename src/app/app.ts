@@ -2,16 +2,35 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { httpResource } from '@angular/common/http';
 import { Visit } from './models/visit.model';
-import { RideHistory } from './models/ride-history.model';
+import { RideHistory, FuelType } from './models/ride-history.model';
 import { environment } from '../environments/environment.development';
 import { RideHistoryComponent } from './components/ride-history.component';
 import { VisitorCountComponent } from './components/visitor-count.component';
 import { CostBreakdownComponent } from './components/cost-breakdown.component';
+import { VehiclePresetsComponent } from './components/vehicle-presets.component';
+import { HistoryStatsComponent } from './components/history-stats.component';
+import { MonthlyEstimatorComponent } from './components/monthly-estimator.component';
+import { ComparisonModeComponent } from './components/comparison-mode.component';
+import { MultiStopComponent } from './components/multi-stop.component';
+import { RideCostChartComponent } from './components/ride-cost-chart.component';
 import { ThemeService } from './services/theme.service';
+
+type Currency = '₹' | '$' | '€' | '£' | '¥' | 'A$' | 'C$';
 
 @Component({
   selector: 'app-root',
-  imports: [FormsModule, RideHistoryComponent, VisitorCountComponent, CostBreakdownComponent],
+  imports: [
+    FormsModule,
+    RideHistoryComponent,
+    VisitorCountComponent,
+    CostBreakdownComponent,
+    VehiclePresetsComponent,
+    HistoryStatsComponent,
+    MonthlyEstimatorComponent,
+    ComparisonModeComponent,
+    MultiStopComponent,
+    RideCostChartComponent,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -21,84 +40,128 @@ export class App {
   private apiURL = environment.trackingApiUrl;
   private themeService = inject(ThemeService);
 
-  // Convert all properties to signals
+  // Core inputs
   distanceKm = signal<number | null>(null);
   mileage = signal<number | null>(null);
   petrolPrice = signal<number | null>(null);
   totalCost = signal<number | null>(null);
 
+  // New feature signals
   unit = signal<'km' | 'mi'>('km');
-  currency = signal<'₹' | '$' | '€'>('₹');
+  currency = signal<Currency>('₹');
+  fuelType = signal<FuelType>('petrol');
+  isRoundTrip = signal(false);
+  rideLabel = signal('');
 
+  // Ride history
   rideHistory = signal<RideHistory[]>([]);
 
-  // Theme-related signals
+  // Theme
   isDarkMode = this.themeService.isDarkMode;
 
-  // Create a signal for the project name
+  // Visitor tracking
   projectName = signal<string>('');
 
-  // Create the httpResource that will react to projectName changes
   visitResource = httpResource<Visit>(() => ({
     url: this.apiURL,
     method: 'POST',
     body: { projectName: this.projectName() }
   }));
 
-  // Use computed signals from httpResource
-  visitorCount = computed(() => {
-    const value = this.visitResource.value();
-    return value?.uniqueVisitors ?? 0;
-  });
-
+  visitorCount = computed(() => this.visitResource.value()?.uniqueVisitors ?? 0);
   isVisitorCountLoading = computed(() => this.visitResource.isLoading());
-
   visitorCountError = computed(() => {
     const error = this.visitResource.error();
     return error ? error.message : null;
   });
+
+  // Computed cost per unit of distance
+  costPerUnit = computed(() => {
+    const cost = this.totalCost();
+    const dist = this.distanceKm();
+    if (!cost || !dist) return null;
+    return cost / dist;
+  });
+
+  readonly fuelLabels: Record<FuelType, string> = {
+    petrol: '⛽ Petrol',
+    diesel: '🛢️ Diesel',
+    cng: '💨 CNG',
+    electric: '⚡ Electric',
+  };
+
+  getFuelLabel(ft: string): string {
+    return this.fuelLabels[ft as FuelType] ?? ft;
+  }
+
+  readonly currencies: { value: Currency; label: string }[] = [
+    { value: '₹', label: '₹ INR' },
+    { value: '$', label: '$ USD' },
+    { value: '€', label: '€ EUR' },
+    { value: '£', label: '£ GBP' },
+    { value: '¥', label: '¥ JPY' },
+    { value: 'A$', label: 'A$ AUD' },
+    { value: 'C$', label: 'C$ CAD' },
+  ];
 
   constructor() {
     this.loadHistory();
   }
 
   ngOnInit() {
-    this.trackVisit();
-  }
-
-  private trackVisit(): void {
-    // Update the signal to trigger the httpResource
     this.projectName.set(this.title);
   }
 
   convertDistanceToKm(): number {
-    return this.unit() === 'km' ? this.distanceKm()! : this.distanceKm()! * 1.60934;
+    const dist = this.distanceKm()!;
+    return this.unit() === 'km' ? dist : dist * 1.60934;
+  }
+
+  getEffectiveDistance(): number {
+    const dist = this.distanceKm()!;
+    return this.isRoundTrip() ? dist * 2 : dist;
   }
 
   calculateCost() {
-    if (this.distanceKm() && this.mileage() && this.petrolPrice()) {
-      const distanceInKm = this.convertDistanceToKm();
-      const litersUsed = distanceInKm / this.mileage()!;
+    const dist = this.getEffectiveDistance();
+    if (dist && this.mileage() && this.petrolPrice()) {
+      const distInKm = this.unit() === 'km' ? dist : dist * 1.60934;
+      const litersUsed = distInKm / this.mileage()!;
       const cost = litersUsed * this.petrolPrice()!;
       this.totalCost.set(cost);
-      this.saveToHistory(distanceInKm, cost);
+      this.saveToHistory(dist, cost);
     }
   }
 
+  onPresetSelected(preset: { mileage: number; fuelType: FuelType }) {
+    this.mileage.set(preset.mileage);
+    this.fuelType.set(preset.fuelType);
+  }
+
+  onMultiStopDistance(dist: number) {
+    this.distanceKm.set(dist);
+  }
+
   saveToHistory(distance: number, totalCost: number) {
+    const costPerUnit = distance > 0 ? totalCost / distance : undefined;
     const record: RideHistory = {
-      distance: this.distanceKm()!,
+      distance,
       mileage: this.mileage()!,
       petrolPrice: this.petrolPrice()!,
       totalCost,
       unit: this.unit(),
       currency: this.currency(),
       date: new Date().toLocaleString(),
+      label: this.rideLabel() || undefined,
+      fuelType: this.fuelType(),
+      isRoundTrip: this.isRoundTrip(),
+      costPerUnit,
     };
 
     const currentHistory = this.rideHistory();
-    this.rideHistory.set([record, ...currentHistory]);
-    localStorage.setItem('rideHistory', JSON.stringify([record, ...currentHistory]));
+    const newHistory = [record, ...currentHistory];
+    this.rideHistory.set(newHistory);
+    localStorage.setItem('rideHistory', JSON.stringify(newHistory));
   }
 
   loadHistory() {
@@ -117,6 +180,8 @@ export class App {
     this.mileage.set(null);
     this.petrolPrice.set(null);
     this.totalCost.set(null);
+    this.rideLabel.set('');
+    this.isRoundTrip.set(false);
   }
 
   clearHistory() {
@@ -126,75 +191,5 @@ export class App {
 
   toggleTheme(): void {
     this.themeService.toggleTheme();
-  }
-
-  exportToCSV() {
-    const history = this.rideHistory();
-    if (history.length === 0) return;
-
-    const headers = [
-      'Distance',
-      'Unit',
-      'Mileage',
-      'Petrol Price',
-      'Total Cost',
-      'Currency',
-      'Date',
-    ];
-    const rows = history.map((r) =>
-      [
-        r.distance,
-        r.unit,
-        r.mileage,
-        r.petrolPrice,
-        r.totalCost.toFixed(2),
-        r.currency,
-        r.date,
-      ].join(',')
-    );
-    const csvContent = [headers.join(','), ...rows].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ride_history.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  printRide(ride: RideHistory) {
-    const printWindow = window.open('', '_blank', 'width=600,height=400');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Ride Receipt</title>
-          <style>
-            body { font-family: Arial; padding: 20px; }
-            h2 { color: #4f46e5; }
-            p { margin: 4px 0; }
-          </style>
-        </head>
-        <body>
-          <h2>🚗 Ride Receipt</h2>
-          <p><strong>Date:</strong> ${ride.date}</p>
-          <p><strong>Distance:</strong> ${ride.distance} ${ride.unit}</p>
-          <p><strong>Mileage:</strong> ${ride.mileage} km/l</p>
-          <p><strong>Petrol Price:</strong> ${ride.currency}${
-      ride.petrolPrice
-    }</p>
-          <p><strong>Total Cost:</strong> ${
-            ride.currency
-          }${ride.totalCost.toFixed(2)}</p>
-          <hr />
-          <p style="text-align:center;">Thank you for using Ride Cost Calculator!</p>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
   }
 }

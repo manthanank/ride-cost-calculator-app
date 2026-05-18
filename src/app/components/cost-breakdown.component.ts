@@ -15,11 +15,11 @@ import { Component, input } from '@angular/core';
           <span>{{ distanceInKm().toFixed(2) }} km</span>
         </div>
         <div class="flex justify-between">
-          <span>Fuel consumption:</span>
-          <span>{{ fuelConsumption().toFixed(2) }} liters</span>
+          <span>{{ fuelLabel() }} consumption:</span>
+          <span>{{ fuelConsumption().toFixed(2) }} {{ fuelUnit() }}</span>
         </div>
         <div class="flex justify-between">
-          <span>Fuel cost:</span>
+          <span>{{ fuelLabel() }} cost:</span>
           <span>{{ currency() }}{{ fuelCost().toFixed(2) }}</span>
         </div>
         <hr class="border-indigo-200 dark:border-indigo-700">
@@ -47,11 +47,20 @@ import { Component, input } from '@angular/core';
 })
 export class CostBreakdownComponent {
   distance = input.required<number>();
-  unit = input.required<'km' | 'mi'>();
+  unit = input.required<string>();
   mileage = input.required<number>();
   petrolPrice = input.required<number>();
   totalCost = input.required<number>();
-  currency = input.required<'₹' | '$' | '€'>();
+  currency = input.required<string>();
+  fuelType = input<string>('petrol');
+
+  fuelLabel() {
+    return this.fuelType() === 'electric' ? 'Energy' : 'Fuel';
+  }
+
+  fuelUnit() {
+    return this.fuelType() === 'electric' ? 'kWh' : 'liters';
+  }
 
   distanceInKm() {
     return this.unit() === 'km' ? this.distance() : this.distance() * 1.60934;
