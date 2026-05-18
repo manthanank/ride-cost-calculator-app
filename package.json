@@ -16,7 +16,7 @@
     "@angular/forms": "^20.0.0",
     "@angular/platform-browser": "^20.0.0",
     "@angular/router": "^20.0.0",
-    "@angular/service-worker": "^20.3.21",
+    "@angular/service-worker": "^20.0.0",
     "@tailwindcss/postcss": "^4.1.11",
     "chart.js": "^4.5.1",
     "postcss": "^8.5.6",
